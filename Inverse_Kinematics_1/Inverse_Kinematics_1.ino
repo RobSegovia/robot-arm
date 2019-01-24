@@ -19,7 +19,8 @@ double mapValueIn = 0;
 double mapValueOut = 0;
 int delayInterval = 20;
 int delayMin = 10;
-int delayMax = 30;
+int delayMax = 40;
+int cosInterval = 0;//COS movement
 
 void setup() {
   servo1.attach(8);
@@ -31,9 +32,9 @@ void setup() {
 
   // starting servo positions for resting arm
 //  armPos(90, 60, 13, 165, 90, 115);//turn-ready position
-  armPos(90, 70, 0, 170, 100, 115);//stand-by position
+  armPos(88, 65, 0, 180, 90, 170);//stand-by position
 
-//  Serial.begin(9600);
+  Serial.begin(9600);
 //  Serial.println( (int)calcServo6_Angle(3, -1) );
 //  Serial.println( (int)calcServo6_Angle(3, 0) );
 //  Serial.println( (int)calcServo6_Angle(3, 1) );
@@ -56,13 +57,43 @@ void setup() {
 }
 
 void loop() {
+//  armPos(90, 70, 20, 170, 90, 115);//stand-by position
 
-  delay(500);
-  armTravel(90, 45, 0, 170, 80, 115);
-  delay(500);
-  armTravel(90, 45, 0, 100, 80, 115);
-  delay(500);
-  armTravel(90, 140, 0, 15, 80, 115);
+  delay(1200);
+  armTravel(170, 50, 0, 100, 90, 115);//ready to dip
+  armTravel(170, 145, 20, 20, 90, 115);//curl up
+  armTravel(170, 155, 20, 15, 90, 115);//dip down
+  
+  armTravel(170, 172, 24, 18, 87, 115);//camera position
+  delay(2200);
+  armTravel(170, 172, 24, 18, 87, 165);//camera position
+  delay(2200);
+  
+  armTravel(170, 155, 20, 15, 90, 165);//reverse dip
+  armTravel(170, 145, 20, 20, 90, 165);//curl up reverse
+  armTravel(170, 50, 0, 100, 90, 165);//return
+  
+  armTravel(88, 0, 0, 150, 90, 165);// travel/carry position
+  delay(3200);
+
+  // deposit item
+  armTravel(10, 50, 0, 100, 90, 165);//return
+  armTravel(10, 145, 20, 20, 90, 165);//curl up reverse
+  armTravel(10, 155, 20, 15, 90, 165);//reverse dip
+  armTravel(10, 172, 24, 18, 87, 165);//camera position
+  delay(2200);
+  armTravel(10, 172, 24, 18, 87, 115);//open claw
+  delay(2200);
+
+  //return to start empty
+  armTravel(10, 155, 20, 15, 90, 115);//reverse dip
+  armTravel(10, 145, 20, 20, 90, 115);//curl up reverse
+  armTravel(10, 50, 0, 100, 90, 115);//return
+
+  armTravel(88, 65, 20, 180, 90, 115);
+  armTravel(88, 65, 0, 180, 90, 170);// REST position
+  delay(2200);
+
 
   // Movement Demo
 //  delay(1000);
@@ -136,25 +167,39 @@ return angle3;
 void armTravel(int a6, int a5, int a4, int a3, int a2, int a1){
   
   int newAnglesArray[6] = {a6, a5, a4, a3, a2, a1};// array for new angles
-  int biggestAngleDiff = 0;
+  int biggestAngle = 0;
   int biggestIndex = 0;
   int jointTravel = 0;
-  
-  int cosInterval = 0;//COS movement
   
   for(int n = 0; n < 6; n++){
     // take absolute difference of new and old angles
     jointTravel = abs( newAnglesArray[n] - servosArray[n].read() );
+//    Serial.print("jointTravel: ");
+//    Serial.print(n);
+//    Serial.print(" - ");
+//    Serial.print(jointTravel );
+//    Serial.println(" ");
     
-    if ( jointTravel >= biggestAngleDiff ){
-        biggestAngleDiff = newAnglesArray[n];
+    if ( jointTravel > biggestAngle ){
+//        biggestAngle = newAnglesArray[n];
+        biggestAngle = jointTravel;
+//        Serial.print("biggestAngle: ");
+//        Serial.println(biggestAngle);
         biggestIndex = n; 
     }
   }
   // finalize jointTravel
   jointTravel = abs( newAnglesArray[biggestIndex] - servosArray[biggestIndex].read() );
+  
+//  Serial.print("FINAL jointTravel: ");
+//  Serial.println(jointTravel);
+//  Serial.println(" ");
 
   for(int i = 0; i <= jointTravel; i++){
+
+//    Serial.print("Joint Travel count: ");
+//    Serial.println(i);
+    
     
       for (int servo = 0; servo < 6; servo++){
         if(newAnglesArray[servo] < servosArray[servo].read() ){
