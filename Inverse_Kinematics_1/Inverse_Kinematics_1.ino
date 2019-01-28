@@ -32,7 +32,7 @@ void setup() {
 
   // starting servo positions for resting arm
 //  armPos(90, 60, 13, 165, 90, 115);//turn-ready position
-  armPos(88, 65, 0, 180, 90, 170);//stand-by position
+  armPos(88, 115, 0, 180, 90, 170);//stand-by position
 
   Serial.begin(9600);
 //  Serial.println( (int)calcServo6_Angle(3, -1) );
@@ -59,6 +59,68 @@ void setup() {
 void loop() {
 //  armPos(90, 70, 20, 170, 90, 115);//stand-by position
 
+  analogFeedbackAngle(1);
+
+//  delay(1000);
+//  armTravel((int)calcServo6_Angle(3,-4), 60, 13, 165, 90, 115);
+////  delay(1000);
+////  armTravel((int)calcServo6_Angle(3,0), 60, 13, 165, 90, 115);
+//  delay(1000);
+//  armTravel((int)calcServo6_Angle(3,4), 60, 13, 165, 90, 115);
+////  delay(1000);
+////  armTravel((int)calcServo6_Angle(3,0), 60, 13, 165, 90, 115);
+}
+
+int analogFeedbackAngle(int servo){
+
+  // 500 readings ~ 100ms
+  int analogReadings[500];
+  int key = 0;
+  int temp = 0;
+  
+  // grab 50 readings
+  for(int i = 0; i < 500; i++){
+    analogReadings[i] = analogRead(servo);
+  }
+  //insertion sort (good for small arrays)
+//  for(int j = 1; j < 50; j++){
+//    key = analogReadings[j];
+//    temp = j-1;  
+//
+//    while(j >= 0 && analogReadings[j] > key){
+//      analogReadings[j+1] = analogReadings[j];
+//      j = j-1;
+//    }
+//
+//    analogReadings[j+1] = key;
+//  }
+  for(int k = 0; k < 500; k++){
+    temp = temp + analogReadings[k];
+//    Serial.println(analogReadings[k]);   
+  }
+  temp = temp / 500;
+  Serial.println(" ");
+  Serial.println(temp);
+//  Serial.println(" ");
+ 
+//  Serial.print("A1: ");
+//  Serial.println(analogRead(1));
+//  Serial.print("A2: ");
+//  Serial.println(analogRead(2));
+//  Serial.print("A3: ");
+//  Serial.println(analogRead(3));
+//  Serial.print("A4: ");
+//  Serial.println(analogRead(4));
+//  Serial.print("A5: ");
+//  Serial.println(analogRead(5));
+//  Serial.print("A6: ");
+//  Serial.println(analogRead(6));
+//  Serial.println(" ");
+//  delay(1000);
+  return temp;
+}
+
+void demoMove(){
   delay(1200);
   armTravel(170, 50, 0, 100, 90, 115);//ready to dip
   armTravel(170, 145, 20, 20, 90, 115);//curl up
@@ -93,27 +155,8 @@ void loop() {
   armTravel(88, 65, 20, 180, 90, 115);
   armTravel(88, 65, 0, 180, 90, 170);// REST position
   delay(2200);
-
-
-  // Movement Demo
-//  delay(1000);
-//  armTravel(135, 30, 20, 45, 45, 170);
-//  delay(1000);
-//  armTravel(90, 90, 13, 155, 90, 115);
-//  delay(1000);
-//  armTravel(45, 30, 20, 90, 90, 170);
-//  delay(1000);
-//  armTravel(90, 90, 13, 155, 90, 115);
-
-//  delay(1000);
-//  armTravel((int)calcServo6_Angle(3,-4), 60, 13, 165, 90, 115);
-////  delay(1000);
-////  armTravel((int)calcServo6_Angle(3,0), 60, 13, 165, 90, 115);
-//  delay(1000);
-//  armTravel((int)calcServo6_Angle(3,4), 60, 13, 165, 90, 115);
-////  delay(1000);
-////  armTravel((int)calcServo6_Angle(3,0), 60, 13, 165, 90, 115);
 }
+
 
 // INVERSE KINEMATICS
 // - calculate movement angles of motors based on distance given
@@ -220,8 +263,6 @@ void armTravel(int a6, int a5, int a4, int a3, int a2, int a1){
   }//end for jointTravel
 }
  
-
-
 // MOVE MOTORS DIRECTLY TO GIVEN POSITION
 void armPos(int a6, int a5, int a4, int a3, int a2, int a1){
   servo1.write(a1);
