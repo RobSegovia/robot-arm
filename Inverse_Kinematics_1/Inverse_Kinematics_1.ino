@@ -13,7 +13,7 @@ Servo servosArray[6] = {servo6, servo5, servo4, servo3, servo2, servo1};
 const int LENGTH_UPPER_ARM = 105;
 const int LENGTH_FOREARM = 148;
 const int LENGTH_HAND = 180;//not precise
-const int LENGTH_GROUND_TO_UPPER_ARM = 190;//not precise, on wooden box
+const int LENGTH_GROUND_TO_UPPER_ARM = 190;// on wooden box
 
 double mapValueIn = 0;
 double mapValueOut = 0;
@@ -21,8 +21,30 @@ int delayInterval = 20;
 int delayMin = 10;
 int delayMax = 40;
 int cosInterval = 0;//COS movement
+int feedbackAngles[6];
 
 void setup() {
+  Serial.begin(9600);
+  
+  // starting servo positions for resting arm
+  analogFeedbackAngles();// put current angles in the array
+
+  //print angles to console
+  for(int i=0;i<6;i++){
+    Serial.println(feedbackAngles[i]);
+  }
+
+  // write servos to whatever the current position is
+  armPos(
+    feedbackAngles[5],
+    feedbackAngles[4],
+    feedbackAngles[3],
+    feedbackAngles[2],
+    feedbackAngles[1],
+    feedbackAngles[0]
+    );
+
+  // initialize the servos
   servo1.attach(8);
   servo2.attach(9);
   servo3.attach(10);
@@ -30,11 +52,10 @@ void setup() {
   servo5.attach(12);
   servo6.attach(13);
 
-  // starting servo positions for resting arm
-//  armPos(90, 60, 13, 165, 90, 115);//turn-ready position
-  armPos(88, 115, 0, 180, 90, 170);//stand-by position
+  //move the servos to STANDBY position
+  armTravel(90, 115, 0, 180, 90, 42);
+  
 
-  Serial.begin(9600);
 //  Serial.println( (int)calcServo6_Angle(3, -1) );
 //  Serial.println( (int)calcServo6_Angle(3, 0) );
 //  Serial.println( (int)calcServo6_Angle(3, 1) );
@@ -57,67 +78,65 @@ void setup() {
 }
 
 void loop() {
-//  armPos(90, 70, 20, 170, 90, 115);//stand-by position
+//analogFeedbackAngles();
 
-  analogFeedbackAngle(1);
+//  delay(500);
+//  armTravel(90, 115, 0, 180, 90, 42);
+//  delay(500);
+//  armTravel(90, 115, 0, 180, 90, 92);
 
-//  delay(1000);
-//  armTravel((int)calcServo6_Angle(3,-4), 60, 13, 165, 90, 115);
-////  delay(1000);
-////  armTravel((int)calcServo6_Angle(3,0), 60, 13, 165, 90, 115);
-//  delay(1000);
-//  armTravel((int)calcServo6_Angle(3,4), 60, 13, 165, 90, 115);
-////  delay(1000);
-////  armTravel((int)calcServo6_Angle(3,0), 60, 13, 165, 90, 115);
+//  delay(1500);
+
 }
 
-int analogFeedbackAngle(int servo){
+void analogFeedbackAngles(){
 
   // 500 readings ~ 100ms
-  int analogReadings[500];
-  int key = 0;
-  int temp = 0;
+  int num = 500;
+  int analogReadings[num];
+
+  long int voltage = 0;
+  int angle = 0;
   
-  // grab 50 readings
-  for(int i = 0; i < 500; i++){
-    analogReadings[i] = analogRead(servo);
+  for(int n = 1; n < 7; n++){
+    
+    for(int i = 0; i < num; i++){
+      analogReadings[i] = analogRead(n);
+    }
+
+    for(int k = 0; k < num; k++){
+      voltage = voltage + analogReadings[k];
+  //    Serial.println(analogReadings[k]);   
+    }
+    voltage = voltage / num;
+    
+    // convert voltage to angle using manually calibrated values
+    if(n==1){
+      angle = map(voltage, 218, 326, 42, 92);
+    }else if(n==2){
+      angle = map(voltage, 145, 497, 10, 180);
+    }else if(n==3){
+      angle = map(voltage, 161, 492, 15, 170);
+    }else if(n==4){
+      angle = map(voltage, 56, 608, 0, 180);
+    }else if(n==5){
+      angle = map(voltage, 160, 514, 33, 150);
+    }else if(n==6){
+      angle = map(voltage, 159, 488, 15, 170);
+    }
+
+    feedbackAngles[n-1] = angle;
+
+    Serial.print("Servo #");
+    Serial.print(n);
+    Serial.print("   Voltage: ");
+    Serial.print(voltage);
+    Serial.print("   Angle: ");
+    Serial.print(angle);
+    Serial.println(" ");
   }
-  //insertion sort (good for small arrays)
-//  for(int j = 1; j < 50; j++){
-//    key = analogReadings[j];
-//    temp = j-1;  
-//
-//    while(j >= 0 && analogReadings[j] > key){
-//      analogReadings[j+1] = analogReadings[j];
-//      j = j-1;
-//    }
-//
-//    analogReadings[j+1] = key;
-//  }
-  for(int k = 0; k < 500; k++){
-    temp = temp + analogReadings[k];
-//    Serial.println(analogReadings[k]);   
-  }
-  temp = temp / 500;
+  
   Serial.println(" ");
-  Serial.println(temp);
-//  Serial.println(" ");
- 
-//  Serial.print("A1: ");
-//  Serial.println(analogRead(1));
-//  Serial.print("A2: ");
-//  Serial.println(analogRead(2));
-//  Serial.print("A3: ");
-//  Serial.println(analogRead(3));
-//  Serial.print("A4: ");
-//  Serial.println(analogRead(4));
-//  Serial.print("A5: ");
-//  Serial.println(analogRead(5));
-//  Serial.print("A6: ");
-//  Serial.println(analogRead(6));
-//  Serial.println(" ");
-//  delay(1000);
-  return temp;
 }
 
 void demoMove(){
