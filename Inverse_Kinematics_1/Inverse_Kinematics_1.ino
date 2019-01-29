@@ -25,6 +25,10 @@ int feedbackAngles[6];
 
 void setup() {
   Serial.begin(9600);
+
+  // set pin 13 as output
+  pinMode(5, OUTPUT);
+  digitalWrite(13, LOW);
   
   // starting servo positions for resting arm
   analogFeedbackAngles();// put current angles in the array
@@ -54,6 +58,7 @@ void setup() {
 
   //move the servos to STANDBY position
   armTravel(90, 115, 0, 180, 90, 42);
+
   
 
 //  Serial.println( (int)calcServo6_Angle(3, -1) );
@@ -79,6 +84,13 @@ void setup() {
 
 void loop() {
 //analogFeedbackAngles();
+
+  // turn on the lasers
+  digitalWrite(5, HIGH);
+  delay(4000);
+  digitalWrite(5, LOW);
+  delay(2000);
+
 
 //  delay(500);
 //  armTravel(90, 115, 0, 180, 90, 42);
