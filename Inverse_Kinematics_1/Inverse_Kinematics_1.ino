@@ -18,7 +18,6 @@ const int LENGTH_GROUND_TO_UPPER_ARM = 190;// on wooden box
 
 double mapValueIn = 0;
 double mapValueOut = 0;
-int delayInterval = 20;
 int delayMin = 10;
 int delayMax = 40;
 int cosInterval = 0;//COS movement
@@ -61,7 +60,6 @@ void setup() {
   servo5.attach(12);
   servo6.attach(13);
 
-
   //move the servos to STANDY then REST position
   armTravel(90, 120, 34, 180, wristAngle, gripAngle);
 
@@ -72,8 +70,7 @@ void setup() {
 
 // this function is an ISR so armPaths() has to
 // be run outside of it otherwise the arduino will ignore the timer and delay() won't work
-void receiveEvent(int howMany) {
-  //  char inByte;
+void receiveEvent(int numBytes) {
   if (Wire.available() > 0) {
     inByte = Wire.read();
   }
@@ -99,17 +96,6 @@ void gripItem(int sensitivity) {
 
     gripperAnalogFeedbackAngle(); // read current angle and put in array
     angleArray[i] = feedbackAngles[0]; // add actual feedback angle of gripper to local array
-
-    // exit function if the detected angle is at fully 'closed'
-    //    if (feedbackAngles[0] >= 92) {
-    //      gripAngle = 92 - (92 - gripAngle); // back up by some degrees
-    //      servo1.write(gripAngle);
-    //
-    //      Serial.print("exit >=92 >> gripAngle = ");
-    //      Serial.print(gripAngle);
-    //
-    //      return;
-    //    }
 
     // check the most recent angle values in the array
     if (i > 8 && i < 56) {
@@ -144,201 +130,219 @@ int ungripItem() {
 void armPaths(  char in  ) {
 
   // comment out next 3 lines for Wire.h functionality
-  //  if (Serial.available() > 0) {
-  //    char inByte;
-  //    inByte = Serial.read();
+//  if (Serial.available() > 0) {
+//    char in;
+//    in = Serial.read();
 
-  // --------------------------- set the wrist angle VERTICAL or HORIZONTAL
-  if (in == 'b') { // B for BOTTLE - Horizontal grip
-    wristAngle = 80;
-    isHorizontal = true;
-  }
-  else if (in == 'm') {// M for MUG - Vertical grip
-    wristAngle = 162;
-    isHorizontal = false;
-  }
-
-  // --------------------------- OPEN or CLOSE the gripper
-  if (in == 'g') { // CLOSE
-    if (isHorizontal) {
-      gripItem(4);
-    } else {
-      gripAngle = 92;
-      servo1.write(gripAngle);
+    // --------------------------- set the wrist angle VERTICAL or HORIZONTAL
+    if (in == 'b') { // B for BOTTLE - Horizontal grip
+      wristAngle = 80;
+      isHorizontal = true;
     }
-  } else if (in == 'u') // OPEN
-    ungripItem();
-
-  if (in == 's') // STANDY
-    armTravel(90, 110, 34, 180, wristAngle, gripAngle);//standby (off platform)
-  else if (in == 'n') // NAP
-    armTravel(90, 100, 24, 180, wristAngle, gripAngle);// rest on platform
-
-  else if (in == 'c') // CARRY
-    armTravel(90, 144, 15, 130, wristAngle, gripAngle);//high carrying GOOD
-
-  else if (in == 'z') // CARRY L
-    armTravel(169, 135, 15, 107, wristAngle, gripAngle);//ready to reach down, RIGHT
-  else if (in == 'x') // CARRY R
-    armTravel(15, 135, 15, 107, wristAngle, gripAngle);//ready to reach down, LEFT
-
-  // ----------------  Positions for picking up object
-
-  // Closest position to robot - 0cm = ~16.5cm from phone
-  else if (in == '0') {
-    if (isHorizontal) {
-      armTravel(169, 135, 20, 60, wristAngle, gripAngle);
-      armTravel(169, 58, 20, 18, wristAngle, gripAngle);
-    } else {
-      armTravel(169, 58, 20, 28, wristAngle, gripAngle);
+    else if (in == 'm') {// M for MUG - Vertical grip
+      wristAngle = 162;
+      isHorizontal = false;
+      armTravel(169, 135, 15, 107, wristAngle, gripAngle);//ready to reach down, RIGHT
+      armTravel(169, 58, 20, 28, wristAngle, gripAngle);// 0 pos
     }
 
-  }
-  else if (in == '1') {
-    if (isHorizontal) {
-      armTravel(169, 135, 20, 60, wristAngle, gripAngle);
-      armTravel(169, 56, 27, 22, wristAngle, gripAngle);
-    } else {
-      armTravel(169, 56, 27, 32, wristAngle, gripAngle);
+    // --------------------------- OPEN or CLOSE the gripper
+    // GRIP ANY -> CARRY
+    if (in == 'g') { // CLOSE
+      if (isHorizontal) {
+        gripItem(4);
+        armTravel(169, 135, 15, 107, wristAngle, gripAngle);//ready to reach down, RIGHT
+        armTravel(90, 144, 15, 130, wristAngle, gripAngle);//high carrying GOOD
+      } else {
+        gripAngle = 92;
+        servo1.write(gripAngle);
+        armTravel(169, 135, 15, 107, wristAngle, gripAngle);//ready to reach down, RIGHT
+        armTravel(90, 144, 15, 130, wristAngle, gripAngle);//high carrying GOOD
+      }
+    } else if (in == 'u') // OPEN
+      ungripItem();
+
+    if (in == 's') // STANDY
+      armTravel(90, 110, 34, 180, wristAngle, gripAngle);//standby (off platform)
+    else if (in == 'n') // NAP
+      armTravel(90, 100, 24, 180, wristAngle, gripAngle);// rest on platform
+    else if (in == 'c') // CARRY
+      armTravel(90, 144, 15, 130, wristAngle, gripAngle);//high carrying GOOD
+    else if (in == 'z') // CARRY L
+      armTravel(169, 135, 15, 107, wristAngle, gripAngle);//ready to reach down, RIGHT
+
+    // DROP OFF ANY -> UNGRIP -> DELAY -> BACKUP -> STANDBY
+    else if (in == 'x') { // CARRY R
+      armTravel(15, 135, 15, 107, wristAngle, gripAngle);//ready to reach down, LEFT
+      // DROP ITEM
+      if (isHorizontal) {
+        armTravel(15, 44, 76, 43, wristAngle, gripAngle);
+      } else {
+        armTravel(15, 44, 76, 53, wristAngle, gripAngle);
+      }
+      ungripItem();// let go then...
+      delay(500);
+      armTravel(15, 135, 15, 107, wristAngle, gripAngle);//back up, LEFT
+      armTravel(90, 110, 34, 180, wristAngle, gripAngle);//standby (off platform)
     }
 
-  }
-  else if (in == '2') {
-    if (isHorizontal) {
-      armTravel(169, 135, 20, 60, wristAngle, gripAngle);
-      armTravel(169, 54, 34, 26, wristAngle, gripAngle);
-    } else {
-      armTravel(169, 54, 34, 36, wristAngle, gripAngle);
+    // ----------------  Positions for picking up object
+
+    // Closest position to robot - 0cm = ~16.5cm from phone
+    // STANDBY -> Z -> SPECIFIED DISTANCE
+    else if (in == '0') {
+      if (isHorizontal) {
+        armTravel(169, 135, 15, 107, wristAngle, gripAngle);//ready to reach down, RIGHT
+        armTravel(169, 135, 20, 60, wristAngle, gripAngle);
+        armTravel(169, 58, 20, 24, wristAngle, gripAngle);
+      } else {        
+        armTravel(169, 56, 20, 24, wristAngle, gripAngle);// 0
+      }
     }
-
-  }
-  else if (in == '3') {
-    if (isHorizontal) {
-      armTravel(169, 135, 20, 60, wristAngle, gripAngle);
-      armTravel(169, 52, 41, 30, wristAngle, gripAngle);
-    } else {
-      armTravel(169, 52, 41, 40, wristAngle, gripAngle);
+    else if (in == '1') {
+      if (isHorizontal) {
+        armTravel(169, 135, 15, 107, wristAngle, gripAngle);//ready to reach down, RIGHT
+        armTravel(169, 135, 20, 60, wristAngle, gripAngle);
+        armTravel(169, 56, 27, 26, wristAngle, gripAngle);
+      } else {       
+        armTravel(169, 54, 34, 28, wristAngle, gripAngle);// 1
+      }
     }
-
-  }
-
-  // MIDDLE pos 5cm
-  else if (in == '4') {
-    if (isHorizontal) {
-      armTravel(169, 135, 20, 60, wristAngle, gripAngle);
-      armTravel(169, 50, 55, 34, wristAngle, gripAngle);
-    } else {
-      armTravel(169, 50, 55, 44, wristAngle, gripAngle);
+    else if (in == '2') {
+      if (isHorizontal) {
+        armTravel(169, 135, 15, 107, wristAngle, gripAngle);//ready to reach down, RIGHT
+        armTravel(169, 135, 20, 60, wristAngle, gripAngle);
+        armTravel(169, 54, 34, 30, wristAngle, gripAngle);
+      } else {        
+        armTravel(169, 54, 34, 28, wristAngle, gripAngle);// 1
+        armTravel(169, 52, 41, 28, wristAngle, gripAngle);// 2
+      }
     }
-
-  }
-
-  else if (in == '5') {
-    if (isHorizontal) {
-      armTravel(169, 135, 20, 60, wristAngle, gripAngle);
-      armTravel(169, 48, 62, 37, wristAngle, gripAngle);
-    } else {
-      armTravel(169, 48, 62, 47, wristAngle, gripAngle);
+    else if (in == '3') {
+      if (isHorizontal) {
+        armTravel(169, 135, 15, 107, wristAngle, gripAngle);//ready to reach down, RIGHT
+        armTravel(169, 135, 20, 60, wristAngle, gripAngle);
+        armTravel(169, 52, 41, 34, wristAngle, gripAngle);
+      } else {        
+        armTravel(169, 54, 34, 28, wristAngle, gripAngle);// 1
+        armTravel(169, 52, 41, 28, wristAngle, gripAngle);// 2
+        armTravel(169, 50, 48, 32, wristAngle, gripAngle);// 3
+      }
     }
-
-  }
-  else if (in == '6') {
-    if (isHorizontal) {
-      armTravel(169, 135, 20, 60, wristAngle, gripAngle);
-      armTravel(169, 46, 69, 40, wristAngle, gripAngle);
-    } else {
-      armTravel(169, 46, 69, 50, wristAngle, gripAngle);
+    // MIDDLE pos 5cm
+    else if (in == '4') {
+      if (isHorizontal) {
+        armTravel(169, 135, 15, 107, wristAngle, gripAngle);//ready to reach down, RIGHT
+        armTravel(169, 135, 20, 60, wristAngle, gripAngle);
+        armTravel(169, 50, 55, 38, wristAngle, gripAngle);
+      } else {
+        armTravel(169, 54, 34, 28, wristAngle, gripAngle);// 1
+        armTravel(169, 52, 41, 28, wristAngle, gripAngle);// 2
+        armTravel(169, 50, 48, 32, wristAngle, gripAngle);// 3
+        armTravel(169, 48, 55, 36, wristAngle, gripAngle);// 4
+      }
     }
-
-  }
-  else if (in == '7') {
-    if (isHorizontal) {
-      armTravel(169, 135, 20, 60, wristAngle, gripAngle);
-      armTravel(169, 44, 76, 43, wristAngle, gripAngle);
-    } else {
-      armTravel(169, 44, 76, 53, wristAngle, gripAngle);
+    else if (in == '5') {
+      if (isHorizontal) {
+        armTravel(169, 135, 15, 107, wristAngle, gripAngle);//ready to reach down, RIGHT
+        armTravel(169, 135, 20, 60, wristAngle, gripAngle);
+        armTravel(169, 48, 62, 42, wristAngle, gripAngle);
+      } else {
+        armTravel(169, 54, 34, 28, wristAngle, gripAngle);// 1
+        armTravel(169, 52, 41, 28, wristAngle, gripAngle);// 2
+        armTravel(169, 50, 48, 32, wristAngle, gripAngle);// 3
+        armTravel(169, 48, 55, 36, wristAngle, gripAngle);// 4
+        armTravel(169, 46, 62, 40, wristAngle, gripAngle);// 5
+      }
     }
-
-  }
-  else if (in == '8') {
-    if (isHorizontal) {
-      armTravel(169, 135, 20, 60, wristAngle, gripAngle);
-      armTravel(169, 43, 83, 46, wristAngle, gripAngle);
-    } else {
-      armTravel(169, 43, 83, 56, wristAngle, gripAngle);
+    else if (in == '6') {
+      if (isHorizontal) {
+        armTravel(169, 135, 15, 107, wristAngle, gripAngle);//ready to reach down, RIGHT
+        armTravel(169, 135, 20, 60, wristAngle, gripAngle);
+        armTravel(169, 46, 69, 44, wristAngle, gripAngle);
+      } else {
+        armTravel(169, 54, 34, 28, wristAngle, gripAngle);// 1
+        armTravel(169, 52, 41, 28, wristAngle, gripAngle);// 2
+        armTravel(169, 50, 48, 32, wristAngle, gripAngle);// 3
+        armTravel(169, 48, 55, 36, wristAngle, gripAngle);// 4
+        armTravel(169, 46, 62, 40, wristAngle, gripAngle);// 5
+        armTravel(169, 44, 69, 44, wristAngle, gripAngle);// 6
+      }
     }
-
-  }
-
-  else if (in == '9') {
-    if (isHorizontal) {
-      armTravel(169, 135, 20, 60, wristAngle, gripAngle);
-      armTravel(169, 42, 90, 49, wristAngle, gripAngle);
-    } else {
-      armTravel(169, 42, 90, 59, wristAngle, gripAngle);
+    else if (in == '7') {
+      if (isHorizontal) {
+        armTravel(169, 135, 15, 107, wristAngle, gripAngle);//ready to reach down, RIGHT
+        armTravel(169, 135, 20, 60, wristAngle, gripAngle);
+        armTravel(169, 44, 76, 46, wristAngle, gripAngle);
+      } else {
+        armTravel(169, 54, 34, 28, wristAngle, gripAngle);// 1
+        armTravel(169, 52, 41, 28, wristAngle, gripAngle);// 2
+        armTravel(169, 50, 48, 32, wristAngle, gripAngle);// 3
+        armTravel(169, 48, 55, 36, wristAngle, gripAngle);// 4
+        armTravel(169, 46, 62, 40, wristAngle, gripAngle);// 5
+        armTravel(169, 44, 69, 44, wristAngle, gripAngle);// 6
+        armTravel(169, 42, 76, 48, wristAngle, gripAngle);// 7
+      }
     }
-
-  }
-
-  // DROP position for bottle
-  else if (in == 'd') {
-    if (isHorizontal) {
-      armTravel(15, 44, 76, 43, wristAngle, gripAngle);
-    } else {
-      armTravel(15, 44, 76, 53, wristAngle, gripAngle);
+    else if (in == '8') {
+      if (isHorizontal) {
+        armTravel(169, 135, 15, 107, wristAngle, gripAngle);//ready to reach down, RIGHT
+        armTravel(169, 135, 20, 60, wristAngle, gripAngle);
+        armTravel(169, 43, 83, 53, wristAngle, gripAngle);
+      } else {
+        armTravel(169, 54, 34, 28, wristAngle, gripAngle);// 1
+        armTravel(169, 52, 41, 28, wristAngle, gripAngle);// 2
+        armTravel(169, 50, 48, 32, wristAngle, gripAngle);// 3
+        armTravel(169, 48, 55, 36, wristAngle, gripAngle);// 4
+        armTravel(169, 46, 62, 40, wristAngle, gripAngle);// 5
+        armTravel(169, 44, 69, 44, wristAngle, gripAngle);// 6
+        armTravel(169, 42, 76, 48, wristAngle, gripAngle);// 7
+        armTravel(169, 41, 83, 52, wristAngle, gripAngle);// 8
+      }
     }
-
-  }
-
-  //  }// end serial //comment out for I2C
-
-
-
+    else if (in == '9') {
+      if (isHorizontal) {
+        armTravel(169, 135, 15, 107, wristAngle, gripAngle);//ready to reach down, RIGHT
+        armTravel(169, 135, 20, 60, wristAngle, gripAngle);
+        armTravel(169, 42, 90, 58, wristAngle, gripAngle);
+      } else {
+        armTravel(169, 54, 34, 28, wristAngle, gripAngle);// 1
+        armTravel(169, 52, 41, 28, wristAngle, gripAngle);// 2
+        armTravel(169, 50, 48, 32, wristAngle, gripAngle);// 3
+        armTravel(169, 48, 55, 36, wristAngle, gripAngle);// 4
+        armTravel(169, 46, 62, 40, wristAngle, gripAngle);// 5
+        armTravel(169, 44, 69, 44, wristAngle, gripAngle);// 6
+        armTravel(169, 42, 76, 48, wristAngle, gripAngle);// 7
+        armTravel(169, 41, 83, 52, wristAngle, gripAngle);// 8
+        armTravel(169, 40, 90, 55, wristAngle, gripAngle);// 9
+      }
+    }
+    //DROP position
+    else if (in == 'd') {
+      if (isHorizontal) {
+        armTravel(15, 44, 76, 43, wristAngle, gripAngle);
+      } else {
+        armTravel(15, 44, 76, 53, wristAngle, gripAngle);
+      }
+    }
+//  }// end serial //comment out for I2C
 }
 
 
 void loop() {
 
-  if (inByte != 'q') {
-    armPaths(inByte);
-    inByte = 'q'; // SET code to do nothing in main loop
-  } else if (inByte == 'q') {
-    // DO NOTHING
-  }
+    if (inByte != 'q') {
+      Serial.print("Before: ");
+      Serial.println(millis());
+      armPaths(inByte);
+      Serial.print("After: ");
+      Serial.println(millis());
+      inByte = 'q'; // SET code to do nothing in main loop
+    } else if (inByte == 'q') {
+      // DO NOTHING
+    }
 
-  //armPaths(inByte); // Keyboard input for Debugging
-
-  //  armPaths('h');//set horz for bottle
-  //  armPaths('z');
-  //  armPaths('0');
-  //  armPaths('g');
-  //  armPaths('z');
-  //  armPaths('c');
-  //  armPaths('x');
-  //  armPaths('D');
-  //  armPaths('u');
-  //  armPaths('x');
-  //  armPaths('s');
-  //  delay(2000);
-  //
-  //  armPaths('v');//set horz for bottle
-  //  armPaths('z');
-  //  armPaths('0');
-  //  gripFast = true;
-  //  armPaths('g');
-  //  gripFast = false;
-  //  armPaths('z');
-  //  armPaths('c');
-  //  armPaths('x');
-  //  armPaths('d');
-  //  armPaths('u');
-  //  armPaths('x');
-  //  armPaths('s');
-  //  delay(2000);
-
-
-  //  analogFeedbackAngles();
-  //  delay(2000);
+//  armPaths(/*inByte*/); // Keyboard input for Debugging
 
 }
 
@@ -384,9 +388,6 @@ void armTravel(int a6, int a5, int a4, int a3, int a2, int a1) {
   }//end for jointTravel
 }
 //  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-
 
 
 void analogFeedbackAngles() {
